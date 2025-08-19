@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password_hash   String
+  role            Role     @default(VOLUNTEER)
+  name            String
+  assigned_events String[] // Array of event IDs for volunteers
+  created_by      String?  // Admin who created this account
+  created_at      DateTime @default(now())
+  is_active       Boolean  @default(true)
+}
+
+enum Role {
+  ADMIN
+  VOLUNTEER
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  name            String   @db.VarChar(100)
+  start_datetime  DateTime
+  end_datetime    DateTime
+  location        String   @db.VarChar(255)
+  longitude       Decimal  @db.Decimal(9, 6)
+  latitude        Decimal  @db.Decimal(9, 6)
+  image           String?
+  short_descrip   String   @db.VarChar(150)
+  description     String   @db.VarChar(450)
+  created_at      DateTime @default(now())
+  
+  // Relations
+  eventTickets    EventTicket[]
+  purchasedTickets PurchasedTicket[]
+}
+
+model EventTicket {
+  id                  String  @id @default(cuid())
+  event_id            String
+  classification      String  // regular, premium, gold
+  quantity            Int
+  cost                Int     // in cents
+  includes_item       Boolean @default(false)
+  item_name          String?  // "Book: 'Building Confidence'" 
+  ticket_description  String  @db.VarChar(150)
+  
+  // Relations
+  event               Event   @relation(fields: [event_id], references: [id])
+  purchasedTickets    PurchasedTicket[]
+}
+
+model PurchasedTicket {
+  id                String    @id @default(cuid())
+  event_id          String
+  event_ticket_id   String
+  purchaser_name    String
+  purchaser_email   String
+  purchaser_phone   String?
+  assigned_name     String    // name on individual ticket
+  qr_code           String    @unique
+  checked_in        Boolean   @default(false)
+  item              Boolean   @default(false)
+  item_collected    Boolean   @default(false)
+  purchase_date     DateTime  @default(now())
+  checked_in_at     DateTime?
+  checked_in_by     String?   // User ID who checked them in
+  
+  // Relations
+  event             Event       @relation(fields: [event_id], references: [id])
+  eventTicket       EventTicket @relation(fields: [event_ticket_id], references: [id])
+}
