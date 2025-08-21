@@ -58,5 +58,41 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// GET /api/auth/me - Get current user info (verify token)
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        role: true, 
+        assigned_events: true,
+        created_at: true,
+        is_active: true
+      }
+    });
+
+    if (!user || !user.is_active) {
+      return res.status(404).json({ error: 'User not found or inactive' });
+    }
+
+    res.json(user);
+
+  } catch (error) {
+    console.error('Error getting user info:', error);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 
 module.exports = router;
