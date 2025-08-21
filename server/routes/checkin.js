@@ -68,10 +68,10 @@ router.post('/scan', async (req, res) => {
   }
 });
 
-
 // POST /api/checkin/complete - Actually check the person in
 router.post('/complete', async (req, res) => {
   try {
+    console.log('req.body:', req.body);
     const { ticket_id, item_given, volunteer_name } = req.body;
 
     const updatedTicket = await prisma.purchasedTicket.update({
