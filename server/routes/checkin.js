@@ -69,4 +69,36 @@ router.post('/scan', async (req, res) => {
 });
 
 
+// POST /api/checkin/complete - Actually check the person in
+router.post('/complete', async (req, res) => {
+  try {
+    const { ticket_id, item_given, volunteer_name } = req.body;
+
+    const updatedTicket = await prisma.purchasedTicket.update({
+      where: { id: ticket_id }, // find the ticket ID
+      data: {                   // what to change within the ticket
+        checked_in: true,
+        checked_in_at: new Date(),
+        checked_in_by: volunteer_name || 'Volunteer',
+        item_collected: item_given || false
+      },
+      include: {
+        event: true,
+        eventTicket: true
+      }
+    });
+
+    res.json({
+      status: 'success',
+      message: `${updatedTicket.assigned_name} is successfully checked in!`,
+      checked_in_at: updatedTicket.checked_in_at,
+      item_given: item_given
+    });
+
+  } catch (error) {
+    console.error('Error completing check-in:', error);
+    res.status(500).json({ error: 'Failed to complete check-in' });
+  }
+});
+
 module.exports = router;
