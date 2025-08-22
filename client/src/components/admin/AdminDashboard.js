@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import EventForm from './EventForm';
+import EventForm from './EditForm';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [events, setEvents] = useState([]);

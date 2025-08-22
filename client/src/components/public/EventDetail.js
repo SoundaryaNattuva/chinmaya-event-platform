@@ -49,27 +49,6 @@ useEffect(() => {
   loadEventData();
 }, [eventId]);
 
-  const fetchEventDetails = async () => {
-    try {
-      const response = await axios.get(`http://localhost:3001/api/events/${eventId}`);
-      setEvent(response.data);
-    } catch (error) {
-      setError('Event not found');
-      console.error('Error fetching event:', error);
-    }
-  };
-
-  const fetchTicketTypes = async () => {
-    try {
-      const response = await axios.get(`http://localhost:3001/api/tickets/event/${eventId}`);
-      setTicketTypes(response.data);
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleTicketSelect = (ticketTypeId, quantity) => {
     setSelectedTickets(prev => ({
       ...prev,

@@ -58,14 +58,6 @@ const Homepage = () => {
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Welcome to Chinmaya Events
           </h2>
-          <p className="text-xl md:text-2xl mb-8 opacity-90">
-            Join us for transformative spiritual and cultural experiences
-          </p>
-          <div className="bg-white bg-opacity-20 rounded-lg p-6 inline-block">
-            <p className="text-lg">
-              ✨ Meditation Sessions • 📚 Book Launches • 🎭 Cultural Programs
-            </p>
-          </div>
         </div>
       </section>
 
