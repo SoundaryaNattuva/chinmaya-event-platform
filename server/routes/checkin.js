@@ -1,8 +1,7 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
-const prisma = new PrismaClient();
 
 // POST /api/checkin/scan - Scan QR code (shows info, doesn't check in yet)
 router.post('/scan', async (req, res) => {

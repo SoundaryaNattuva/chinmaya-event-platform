@@ -1,9 +1,7 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const crypto = require('crypto');
-
-const prisma = new PrismaClient();
 
 // POST /api/tickets/types - Create ticket type for an event
 router.post('/types', async (req, res) => {

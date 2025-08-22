@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import EventForm from './EventForm';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('events');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -109,12 +111,15 @@ const AdminDashboard = ({ user, onLogout }) => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Events Management</h2>
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-brand-blue hover:bg-brand-blue-light text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                + Create New Event
-              </button>
+                <button
+                  onClick={() => {
+                    setSelectedEvent(null); // null = create mode
+                    setShowEventForm(true);
+                  }}
+                  className="bg-brand-blue hover:bg-brand-blue-light text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  + Create New Event
+                </button>
             </div>
 
             {loading ? (
@@ -125,10 +130,13 @@ const AdminDashboard = ({ user, onLogout }) => {
               <div className="text-center py-12 bg-white rounded-lg shadow">
                 <div className="text-xl text-gray-600 mb-4">No events created yet</div>
                 <button
-                  onClick={() => setShowCreateForm(true)}
+                  onClick={() => {
+                    setSelectedEvent(null); // null = create mode
+                    setShowEventForm(true);
+                  }}
                   className="bg-brand-blue hover:bg-brand-blue-light text-white px-6 py-2 rounded-lg font-medium transition-colors"
                 >
-                  Create Your First Event
+                  + Create New Event
                 </button>
               </div>
             ) : (
@@ -185,7 +193,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                           >
                             View
                           </Link>
-                          <button className="text-indigo-600 hover:text-indigo-900 font-medium">
+                          <button 
+                            onClick={() => {
+                              setSelectedEvent(event); // pass event = edit mode
+                              setShowEventForm(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-900 font-medium"
+                          >
                             Edit
                           </button>
                           <button className="text-gray-600 hover:text-gray-900 font-medium">
@@ -219,251 +233,21 @@ const AdminDashboard = ({ user, onLogout }) => {
       </div>
 
       {/* Create Event Modal */}
-      {showCreateForm && (
-        <CreateEventModal 
-          onClose={() => setShowCreateForm(false)}
-          onEventCreated={() => {
-            setShowCreateForm(false);
+      {showEventForm && (
+        <EventForm
+          event={selectedEvent} // null for create, event object for edit
+          title={selectedEvent ? 'Edit Event' : 'Create New Event'}
+          onClose={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
+          }}
+          onSuccess={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
             fetchEvents();
           }}
-          user={user}
         />
       )}
-    </div>
-  );
-};
-
-// Create Event Modal Component
-const CreateEventModal = ({ onClose, onEventCreated, user }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    start_datetime: '',
-    end_datetime: '',
-    location: '',
-    longitude: '',
-    latitude: '',
-    image: '',
-    short_descrip: '',
-    description: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3001/api/admin/events', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      onEventCreated();
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to create event');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-900">Create New Event</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
-            >
-              ×
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                  placeholder="Book Launch Ceremony"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location *
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                  placeholder="123 Main St, City, State"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date & Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  name="start_datetime"
-                  value={formData.start_datetime}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date & Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  name="end_datetime"
-                  value={formData.end_datetime}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Longitude (optional)
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  name="longitude"
-                  value={formData.longitude}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                  placeholder="-74.7429"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Latitude (optional)
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  name="latitude"
-                  value={formData.latitude}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                  placeholder="40.2206"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Image URL (optional)
-              </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                placeholder="https://example.com/event-image.jpg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Short Description *
-              </label>
-              <input
-                type="text"
-                name="short_descrip"
-                value={formData.short_descrip}
-                onChange={handleChange}
-                required
-                maxLength="150"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                placeholder="Brief description for event cards"
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {formData.short_descrip.length}/150 characters
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Description *
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                rows={4}
-                maxLength="450"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                placeholder="Detailed description of the event..."
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {formData.description.length}/450 characters
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4 pt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 bg-brand-blue hover:bg-brand-blue-light text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Creating...' : 'Create Event'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
   );
 };
