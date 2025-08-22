@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const Homepage = ({ onLoginClick }) => {
+const Homepage = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,16 +38,16 @@ const Homepage = ({ onLoginClick }) => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div>
+            <Link to="/">
               <h1 className="text-3xl font-bold text-brand-blue">Chinmaya Events</h1>
               <p className="text-gray-600">Discover inspiring events and experiences</p>
-            </div>
-            <button
-              onClick={onLoginClick}
+            </Link>
+            <Link
+              to="/staff/login"
               className="bg-brand-blue hover:bg-brand-blue-light text-white px-6 py-2 rounded-lg transition-colors font-medium"
             >
               Staff Login
-            </button>
+            </Link>
           </div>
         </div>
       </header>
@@ -88,7 +89,7 @@ const Homepage = ({ onLoginClick }) => {
               {events.map((event) => (
                 <div key={event.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   {/* Event Image */}
-                  <div className="h-48 bg-gradient-to-r from-brand-blue to-brand-orange flex items-center justify-center">
+                  <div className="h-48 bg-brand-blue flex items-center justify-center">
                     {event.image ? (
                       <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
                     ) : (
@@ -112,9 +113,12 @@ const Homepage = ({ onLoginClick }) => {
                       </div>
                     </div>
 
-                    <button className="w-full bg-brand-orange hover:bg-brand-orange-light text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                    <Link
+                      to={`/events/${event.id}`}
+                      className="block w-full bg-brand-orange hover:bg-brand-orange-light text-white py-3 px-4 rounded-lg font-medium transition-colors text-center"
+                    >
                       View Details & Buy Tickets
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}
