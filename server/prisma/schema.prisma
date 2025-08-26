@@ -42,6 +42,7 @@ model EventTicket {
   cost             Decimal           @db.Decimal(10, 2)
   includes_item    Boolean           @default(false)
   item_name        String?
+  sold_count       Int               @default(0)
   event            Event             @relation(fields: [event_id], references: [id])
   purchasedTickets PurchasedTicket[]
 }
