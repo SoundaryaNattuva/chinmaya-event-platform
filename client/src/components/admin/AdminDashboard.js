@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import EventForm from './EditForm';
+import EditForm from './EditForm';
+import CreateForm from './CreateForm';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [events, setEvents] = useState([]);
@@ -234,7 +235,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Create Event Modal */}
       {showEventForm && (
-        <EventForm
+        <CreateForm
           event={selectedEvent} // null for create, event object for edit
           title={selectedEvent ? 'Edit Event' : 'Create New Event'}
           onClose={() => {

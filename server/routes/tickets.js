@@ -13,7 +13,6 @@ router.post('/types', async (req, res) => {
       cost,
       includes_item,
       item_name,
-      ticket_description
     } = req.body;
 
     const ticketType = await prisma.eventTicket.create({
@@ -23,8 +22,7 @@ router.post('/types', async (req, res) => {
         quantity: parseInt(quantity),
         cost: parseInt(cost),
         includes_item: includes_item || false,
-        item_name,
-        ticket_description
+        item_name
       }
     });
 

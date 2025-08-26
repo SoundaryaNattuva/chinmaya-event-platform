@@ -4,39 +4,64 @@ const router = express.Router();
 
 const prisma = new PrismaClient();
 
-// POST /api/admin/events - Create new event (admin only - we'll add auth later)
+// POST /api/admin/events - Create new event with tickets (admin only)
 router.post('/events', async (req, res) => {
+  console.log('Received payload:', req.body);
   try {
     const {
       name,
       start_datetime,
       end_datetime,
       location,
-      longitude,
-      latitude,
+      place_id,
       image,
       short_descrip,
-      description
+      description,
+      tickets // Array of ticket objects
     } = req.body;
 
-    const event = await prisma.event.create({
-      data: {
-        name,
-        start_datetime: new Date(start_datetime),
-        end_datetime: new Date(end_datetime),
-        location,
-        longitude: parseFloat(longitude),
-        latitude: parseFloat(latitude),
-        image,
-        short_descrip,
-        description
-      }
+    // Use Prisma transaction to create event and tickets together
+    const result = await prisma.$transaction(async (prisma) => {
+      // Create the event first
+      const event = await prisma.event.create({
+        data: {
+          name,
+          start_datetime: new Date(start_datetime),
+          end_datetime: new Date(end_datetime),
+          location,
+          place_id,
+          image,
+          short_descrip,
+          description,
+        }
+      });
+
+      // Create all tickets for this event
+      const eventTickets = await Promise.all(
+        tickets.map(ticket => 
+          prisma.eventTicket.create({
+            data: {
+              event_id: event.id,
+              classification: ticket.classification,
+              quantity: ticket.quantity,
+              cost: ticket.cost,
+              includes_item: ticket.includes_item || false,
+              item_name: ticket.item_name || null,
+            }
+          })
+        )
+      );
+
+      return {
+        event,
+        tickets: eventTickets
+      };
     });
 
-    res.status(201).json(event);
+    res.status(201).json(result);
   } catch (error) {
-    console.error('Error creating event:', error);
-    res.status(500).json({ error: 'Failed to create event' });
+    console.error('Error creating event with tickets:', error);
+    res.status(500).json({ error: 'Failed to create event with tickets' });
   }
 });
 
@@ -61,11 +86,10 @@ router.put('/events/:id', async (req, res) => {
   try {
     const { 
       name, 
-      description, 
       short_descrip,
-      location, 
-      longitude,
-      latitude,
+      description, 
+      location,
+      place_id,
       image,
       start_datetime, 
       end_datetime 
@@ -76,11 +100,10 @@ router.put('/events/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         name,
-        description,
         short_descrip,
+        description,
         location,
-        longitude: longitude ? parseFloat(longitude) : undefined,
-        latitude: latitude ? parseFloat(latitude) : undefined,
+        place_id,
         image,
         start_datetime: start_datetime ? new Date(start_datetime) : undefined,
         end_datetime: end_datetime ? new Date(end_datetime) : undefined

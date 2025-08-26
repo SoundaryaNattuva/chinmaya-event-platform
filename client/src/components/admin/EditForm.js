@@ -9,14 +9,13 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
   const [eventData, setEventData] = useState({
     name: '',
     location: '',
-    latitude: null,
-    longitude: null,
+    place_id: '',
     date: '',
     startTime: '',
     endTime: '',
     imageUrl: '',
-    shortDescription: '',
-    fullDescription: ''
+    short_descrip: '',
+    description: ''
   });
 
   // Step 2 - Ticket Details
@@ -24,11 +23,11 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
     tickets: [
       {
         id: 1,
-        type: '',
-        price: '',
+        classification: '',
+        cost: '',
         quantity: '',
-        includesItem: false,
-        itemName: ''
+        includes_item: false,
+        item_name: ''
       }
     ]
   });
@@ -52,14 +51,12 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
       setEventData({
         name: event.name || '',
         location: event.location || '',
-        latitude: event.latitude || null,
-        longitude: event.longitude || null,
         date: startDate.toISOString().split('T')[0],
         startTime: startDate.toTimeString().slice(0, 5),
         endTime: endDate.toTimeString().slice(0, 5),
-        imageUrl: event.image_url || '',
-        shortDescription: event.short_descrip || '',
-        fullDescription: event.full_descrip || ''
+        image: event.image_url || '',
+        short_descrip: event.short_descrip || '',
+        description: event.full_descrip || ''
       });
       
       // Populate ticket data if available
@@ -67,11 +64,11 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
         setTicketData({
           tickets: event.tickets.map((ticket, index) => ({
             id: ticket.id || index + 1,
-            type: ticket.type || '',
-            price: ticket.price || '',
+            classification: ticket.classification || '',
+            cost: ticket.cost || '',
             quantity: ticket.quantity || '',
-            includesItem: ticket.includesItem || false,
-            itemName: ticket.itemName || ''
+            includes_item: ticket.includes_item || false,
+            item_name: ticket.item_name || ''
           }))
         });
       }
@@ -81,24 +78,23 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
       setEventData({
         name: '',
         location: '',
-        latitude: null,
-        longitude: null,
+        place_id: '',
         date: '',
         startTime: '',
         endTime: '',
         imageUrl: '',
-        shortDescription: '',
-        fullDescription: ''
+        short_descrip: '',
+        description: ''
       });
       setTicketData({
         tickets: [
           {
             id: 1,
-            type: '',
-            price: '',
+            classification: '',
+            cost: '',
             quantity: '',
-            includesItem: false,
-            itemName: ''
+            includes_item: false,
+            item_name: ''
           }
         ]
       });
@@ -171,8 +167,7 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
       setEventData(prev => ({
         ...prev,
         location: place.formatted_address,
-        latitude: lat,
-        longitude: lng
+        place_id: place.place_id
       }));
 
       setSelectedPlace(place);
@@ -196,9 +191,15 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
     });
 
     // If we have event coordinates, center the map there
-    if (eventData.latitude && eventData.longitude) {
-      map.setCenter({ lat: eventData.latitude, lng: eventData.longitude });
-      updateMap(eventData.latitude, eventData.longitude, eventData.location);
+    if (eventData.place_id) {
+      // Optional: Geocode the place_id to get coordinates for map centering
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ placeId: eventData.place_id }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const location = results[0].geometry.location;
+          updateMap(location.lat(), location.lng(), eventData.location);
+        }
+      });
     }
 
     map.addListener('click', (e) => {
@@ -211,8 +212,7 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
           setEventData(prev => ({
             ...prev,
             location: results[0].formatted_address,
-            latitude: lat,
-            longitude: lng
+            place_id: results[0].place_id 
           }));
           
           if (addressInputRef.current) {
@@ -225,7 +225,7 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
     });
 
     window.eventMap = map;
-  }, [eventData.latitude, eventData.longitude, eventData.location, updateMap]);
+  }, [eventData.place_id, eventData.location, updateMap]);
 
   // Initialize autocomplete and map when Google Maps loads and modal is open
   useEffect(() => {
@@ -262,11 +262,11 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
         ...prev.tickets,
         {
           id: newId,
-          type: '',
-          price: '',
+          classification: '',
+          cost: '',
           quantity: '',
-          includesItem: false,
-          itemName: ''
+          includes_item: false,
+          item_name: ''
         }
       ]
     }));
@@ -281,7 +281,7 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
   };
 
   const validateStep1 = () => {
-    const required = ['name', 'location', 'date', 'startTime', 'endTime', 'shortDescription', 'fullDescription'];
+    const required = ['name', 'location', 'date', 'startTime', 'endTime', 'short_descrip', 'description'];
     const missing = required.filter(field => !eventData[field]);
     
     if (missing.length > 0) {
@@ -289,7 +289,7 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
       return false;
     }
     
-    if (!eventData.latitude || !eventData.longitude) {
+    if (!eventData.place_id) {
       alert('Please select a valid location on the map.');
       return false;
     }
@@ -309,28 +309,37 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     setLoading(true);
+    console.log('Auth token:', localStorage.getItem('authToken'));
     
     try {
+      const token = localStorage.getItem('authToken');
+
       const eventPayload = {
         name: eventData.name,
         location: eventData.location,
-        latitude: eventData.latitude,
-        longitude: eventData.longitude,
+        place_id: eventData.place_id,
         start_datetime: `${eventData.date}T${eventData.startTime}`,
         end_datetime: `${eventData.date}T${eventData.endTime}`,
         image_url: eventData.imageUrl,
-        short_descrip: eventData.shortDescription,
-        full_descrip: eventData.fullDescription,
+        short_descrip: eventData.short_descrip,
+        full_descrip: eventData.description,
         tickets: ticketData.tickets
+      };
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`, // Add auth header
+          'Content-Type': 'application/json'
+        }
       };
 
       if (event) {
         // Edit mode - update existing event
-        await axios.put(`http://localhost:3001/api/events/${event.id}`, eventPayload);
+        await axios.put(`http://localhost:3001/api/admin/events/${event.id}`, eventPayload, config);
         alert('Event updated successfully!');
       } else {
         // Create mode - add new event
-        await axios.post('http://localhost:3001/api/events', eventPayload);
+        await axios.post('http://localhost:3001/api/admin/events', eventPayload, config);
         alert('Event created successfully!');
       }
 
@@ -435,10 +444,10 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                       name="location"
                       value={eventData.location}
                       onChange={(e) => {
-                        setEventData(prev => ({ ...prev, location: e.target.value }));
+                        setEventData(prev => ({ ...prev, location: e.target.value}));
                         // Clear coordinates when manually typing
                         if (!e.target.value) {
-                          setEventData(prev => ({ ...prev, latitude: null, longitude: null }));
+                          setEventData(prev => ({ ...prev, place_id: '' }));
                           setSelectedPlace(null);
                         }
                       }}
@@ -446,9 +455,9 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                       placeholder="Start typing an address..."
                       required
                     />
-                    {eventData.latitude && eventData.longitude && (
+                    {eventData.location && (
                       <p className="text-xs text-green-600 mt-1">
-                        ✓ Location coordinates: {Number(eventData.latitude).toFixed(4)}, {Number(eventData.longitude).toFixed(4)}
+                        ✓ Location coordinates: {eventData.location}
                       </p>
                     )}
                   </div>
@@ -524,8 +533,8 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                       Short Description *
                     </label>
                     <textarea
-                      name="shortDescription"
-                      value={eventData.shortDescription}
+                      name="short_descrip"
+                      value={eventData.short_descrip}
                       onChange={handleEventChange}
                       rows={2}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -541,8 +550,8 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                       Full Description *
                     </label>
                     <textarea
-                      name="fullDescription"
-                      value={eventData.fullDescription}
+                      name="description"
+                      value={eventData.description}
                       onChange={handleEventChange}
                       rows={4}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -613,23 +622,23 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                         </label>
                         <input
                           type="text"
-                          value={ticket.type}
-                          onChange={(e) => handleTicketChange(ticket.id, 'type', e.target.value)}
+                          value={ticket.classification}
+                          onChange={(e) => handleTicketChange(ticket.id, 'classification', e.target.value)}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="e.g., General, VIP, Student"
                           required
                         />
                       </div>
 
-                      {/* Price */}
+                      {/* Cost */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Price ($) *
+                          Cost ($) *
                         </label>
                         <input
                           type="number"
-                          value={ticket.price}
-                          onChange={(e) => handleTicketChange(ticket.id, 'price', e.target.value)}
+                          value={ticket.cost}
+                          onChange={(e) => handleTicketChange(ticket.id, 'cost', e.target.value)}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="0.00"
                           min="0"
@@ -661,8 +670,8 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                         <input
                           type="checkbox"
                           id={`includes-item-${ticket.id}`}
-                          checked={ticket.includesItem}
-                          onChange={(e) => handleTicketChange(ticket.id, 'includesItem', e.target.checked)}
+                          checked={ticket.includes_item || false}
+                          onChange={(e) => handleTicketChange(ticket.id, 'includes_item', e.target.checked)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                         <label htmlFor={`includes-item-${ticket.id}`} className="ml-2 text-sm text-gray-700">
@@ -670,15 +679,15 @@ const EditForm = ({ event, title, onClose, onSuccess }) => {
                         </label>
                       </div>
 
-                      {ticket.includesItem && (
+                      {ticket.includes_item && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Item Name *
                           </label>
                           <input
                             type="text"
-                            value={ticket.itemName}
-                            onChange={(e) => handleTicketChange(ticket.id, 'itemName', e.target.value)}
+                            value={ticket.item_name}
+                            onChange={(e) => handleTicketChange(ticket.id, 'item_name', e.target.value)}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="e.g., T-shirt, Meal, Book"
                             required
