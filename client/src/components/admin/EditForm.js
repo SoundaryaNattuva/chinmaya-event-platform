@@ -23,8 +23,8 @@ const EventEditForm = ({ event, onClose, onSuccess }) => {
   useEffect(() => {
     if (event) {
       console.log('Event received:', event);
-      console.log('Event tickets:', event.tickets);
-      console.log('Tickets array length:', event.tickets?.length);
+      console.log('Event tickets:', event.eventTickets);
+      console.log('Tickets array length:', event.eventTickets?.length);
       setFormData({
         name: event.name || '',
         start_datetime: event.start_datetime || '',
@@ -130,10 +130,9 @@ const EventEditForm = ({ event, onClose, onSuccess }) => {
 
   const handleSave = async () => {
     setSaving(true);
-    
     try {
       const token = localStorage.getItem('authToken');
-      
+      console.log("tickets:", tickets);
       // Format the data for the API
       const updateData = {
         name: formData.name,
