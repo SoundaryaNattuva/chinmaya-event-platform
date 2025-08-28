@@ -11,10 +11,6 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [showEventForm, setShowEventForm] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
   const fetchEvents = async () => {
     try {
       const response = await axios.get('http://localhost:3001/api/events');
@@ -35,6 +31,10 @@ const AdminDashboard = ({ user, onLogout }) => {
       minute: '2-digit'
     });
   };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -195,9 +195,15 @@ const AdminDashboard = ({ user, onLogout }) => {
                             View
                           </Link>
                           <button 
-                            onClick={() => {
-                              setSelectedEvent(event); // pass event = edit mode
-                              setShowEventForm(true);
+                            onClick={async () => {
+                              try {
+                                const response = await axios.get(`http://localhost:3001/api/events/${event.id}`);
+                                setSelectedEvent(response.data);
+                                setShowEventForm(true);
+                              } catch (error) {
+                                console.error('Error loading event:', error);
+                                alert('Error loading event');
+                              }
                             }}
                             className="text-indigo-600 hover:text-indigo-900 font-medium"
                           >
@@ -233,11 +239,24 @@ const AdminDashboard = ({ user, onLogout }) => {
         )}
       </div>
 
-      {/* Create Event Modal */}
-      {showEventForm && (
+      {/* Event Modal */}
+      {showEventForm && selectedEvent && (
+        <EditForm
+          event={selectedEvent}
+          onClose={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
+          }}
+          onSuccess={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
+            fetchEvents();
+          }}
+        />
+      )}
+
+      {showEventForm && !selectedEvent && (
         <CreateForm
-          event={selectedEvent} // null for create, event object for edit
-          title={selectedEvent ? 'Edit Event' : 'Create New Event'}
           onClose={() => {
             setShowEventForm(false);
             setSelectedEvent(null);

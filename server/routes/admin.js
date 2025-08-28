@@ -4,6 +4,15 @@ const router = express.Router();
 
 const prisma = new PrismaClient();
 
+// Helper function to check if any tickets have been sold
+const hasTicketSales = async (eventId) => {
+  const ticketsWithSales = await prisma.eventTicket.findMany({
+    where: { event_id: eventId },
+    select: { sold_count: true }
+  });  
+  return ticketsWithSales.some(ticket => ticket.sold_count > 0);
+};
+
 // POST /api/admin/events - Create new event with tickets (admin only)
 router.post('/events', async (req, res) => {
   console.log('Received payload:', req.body);
@@ -83,6 +92,9 @@ router.delete('/events/:id', async (req, res) => {
 
 // PUT /api/admin/events/:id - Update event details (safe fields only)
 router.put('/events/:id', async (req, res) => {
+  const eventId = req.params.id;
+  const salesStarted = await hasTicketSales(eventId);
+
   try {
     const { 
       name, 
@@ -92,7 +104,8 @@ router.put('/events/:id', async (req, res) => {
       place_id,
       image,
       start_datetime, 
-      end_datetime 
+      end_datetime,
+      tickets 
     } = req.body;
 
     // Only update safe fields - NO ticket quantities or prices
@@ -109,6 +122,18 @@ router.put('/events/:id', async (req, res) => {
         end_datetime: end_datetime ? new Date(end_datetime) : undefined
       }
     });
+
+    // Handle ticket updates with restrictions
+    if (tickets && tickets.length > 0) {
+      if (salesStarted) {
+        // Apply restrictions - we'll implement validation here next
+        // For now, prevent all ticket changes if sales started
+        throw new Error('Cannot modify tickets after sales have begun');
+      } else {
+        // Full ticket editing allowed before sales
+        // Update ticket logic here
+      }
+    }
 
     res.json({
       message: 'Event updated successfully',
