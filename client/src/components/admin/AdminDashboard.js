@@ -164,7 +164,10 @@ const AdminDashboard = ({ user, onLogout }) => {
   const fetchEvents = async () => {
     try {
       const response = await axios.get('http://localhost:3001/api/events');
-      setEvents(response.data);
+      const sortedEvents = response.data.sort((a, b) => {
+        return new Date(b.start_datetime) - new Date(a.start_datetime);
+      });
+      setEvents(sortedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -194,19 +197,41 @@ const AdminDashboard = ({ user, onLogout }) => {
   };
 
   // Helper function to determine event status
-  const getEventStatus = (startDateTime, endDateTime) => {
-    const now = new Date();
-    const start = new Date(startDateTime);
-    const end = endDateTime ? new Date(endDateTime) : null;
+const getEventStatus = (startDateTime, endDateTime) => {
+  const now = new Date();
+  const start = new Date(startDateTime);
+  const end = endDateTime ? new Date(endDateTime) : null;
 
-    if (now < start) {
-      return { text: 'Active', color: 'bg-blue-100 text-blue-800' };
-    } else if (end && now >= start && now <= end) {
-      return { text: 'Ongoing', color: 'bg-green-100 text-green-800' };
+  // Check if event is happening today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+  
+  const eventStart = new Date(start);
+  eventStart.setHours(0, 0, 0, 0); // Start of event day
+
+  // If event starts today, consider it happening
+  if (eventStart.getTime() === today.getTime()) {
+    return { text: 'Happening', color: 'bg-green-100 text-green-800' };
+  }
+
+  // For events not today, use simple logic
+  if (now < start) {
+    return { text: 'Upcoming', color: 'bg-blue-100 text-blue-800' };
+  } else if (end && now >= start && now <= end) {
+    return { text: 'Happening', color: 'bg-green-100 text-green-800' };
+  } else if (!end && now >= start) {
+    // If no end time is specified, assume it's happening for a reasonable duration (e.g., 3 hours)
+    const assumedDuration = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+    const assumedEnd = new Date(start.getTime() + assumedDuration);
+    if (now <= assumedEnd) {
+      return { text: 'Happening', color: 'bg-green-100 text-green-800' };
     } else {
       return { text: 'Past', color: 'bg-gray-100 text-gray-800' };
     }
-  };
+  } else {
+    return { text: 'Past', color: 'bg-gray-100 text-gray-800' };
+  }
+};
 
   useEffect(() => {
     // Check authentication first
