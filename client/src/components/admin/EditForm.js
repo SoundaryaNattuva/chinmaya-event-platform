@@ -267,6 +267,7 @@ const EventEditForm = ({ event, onClose, onSuccess }) => {
             </div>
           </div>
           {/* Tickets Section */}
+          {/* 
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Ticket Types</h2>
@@ -387,6 +388,8 @@ const EventEditForm = ({ event, onClose, onSuccess }) => {
               </div>
             )}
           </div>  
+          */}
+
           <div className="mt-6 space-x-4">
             <button 
               onClick={onClose}

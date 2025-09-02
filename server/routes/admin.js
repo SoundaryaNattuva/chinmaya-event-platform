@@ -76,13 +76,17 @@ router.post('/events', async (req, res) => {
 
 // DELETE api/admin/events/:id - Delete an event (admin only - we'll add auth later)
 router.delete('/events/:id', async (req, res) => {
+  const eventId = req.params.id;
+  console.log('eventId:', eventId);
   try {
-    const eventId = req.params.id;  
-
+    // First delete all tickets for this event bc event has tickets as FK
+    await prisma.eventTicket.deleteMany({
+      where: { event_id: eventId }
+    });
+    //Delete event
     await prisma.event.delete({
       where: { id: eventId }
     });
-
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting event:', error);
@@ -122,47 +126,6 @@ router.put('/events/:id', async (req, res) => {
         end_datetime: end_datetime ? new Date(end_datetime) : undefined
       }
     });
-
-    // Backend code - safest approach
-    if (tickets && tickets.length > 0) {
-      for (const ticket of tickets) {
-        try {
-          // Try to find existing ticket
-          const existingTicket = await prisma.eventTicket.findUnique({
-            where: { id: ticket.id }
-          });
-
-          if (existingTicket) {
-            // Update existing ticket
-            await prisma.eventTicket.update({
-              where: { id: ticket.id },
-              data: {
-                classification: ticket.classification,
-                cost: ticket.cost,
-                quantity: ticket.quantity,
-                includes_item: ticket.includes_item,
-                item_name: ticket.includes_item ? ticket.item_name : null
-              }
-            });
-          } else {
-            // Create new ticket (ID doesn't exist in DB)
-            await prisma.eventTicket.create({
-              data: {
-                event_id: eventId,
-                classification: ticket.classification,
-                cost: ticket.cost,
-                quantity: ticket.quantity,
-                includes_item: ticket.includes_item,
-                item_name: ticket.includes_item ? ticket.item_name : null
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Error processing ticket ${ticket.id}:`, error);
-          // Continue processing other tickets
-        }
-      }
-    }
     res.json({
       message: 'Event updated successfully',
       event: updatedEvent

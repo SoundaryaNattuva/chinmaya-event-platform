@@ -1,8 +1,147 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, Edit, Ticket, BarChart3, Trash2, MoreHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import EditForm from './EditForm';
 import CreateForm from './CreateForm';
+
+const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm, fetchEvents, config }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const actions = [
+    {
+      id: 'view',
+      label: 'View Event',
+      icon: Eye,
+      color: 'text-blue-600 hover:bg-blue-50'
+    },
+    {
+      id: 'edit',
+      label: 'Edit Details',
+      icon: Edit,
+      color: 'text-gray-700 hover:bg-gray-50'
+    },
+    {
+      id: 'tickets',
+      label: 'Manage Tickets',
+      icon: Ticket,
+      color: 'text-green-600 hover:bg-green-50'
+    },
+    {
+      id: 'analytics',
+      label: 'View Analytics',
+      icon: BarChart3,
+      color: 'text-purple-600 hover:bg-purple-50'
+    },
+    {
+      id: 'delete',
+      label: 'Delete Event',
+      icon: Trash2,
+      color: 'text-red-600 hover:bg-red-50',
+      separator: true
+    }
+  ];
+
+  const handleActionClick = async (actionId) => {
+    setIsOpen(false);
+    
+    switch (actionId) {
+      case 'view':
+        // Navigate to view event page
+        window.location.href = `/events/${event.id}`;
+        break;
+        
+      case 'edit':
+        try {
+          const response = await axios.get(`http://localhost:3001/api/admin/events/${event.id}`);
+          setSelectedEvent(response.data);
+          setShowEventForm(true);
+        } catch (error) {
+          console.error('Error loading event:', error);
+          alert('Error loading event');
+        }
+        break;
+        
+      case 'tickets':
+        // Navigate to manage tickets page
+        console.log(`Managing tickets for: ${event.name}`);
+        // TODO: Implement navigation to tickets page
+        break;
+        
+      case 'analytics':
+        // Navigate to analytics page
+        console.log(`Viewing analytics for: ${event.name}`);
+        // TODO: Implement navigation to analytics page
+        break;
+        
+      case 'delete':
+        if (window.confirm(`Are you sure you want to delete "${event.name}"?`)) {
+          try {
+            await axios.delete(`http://localhost:3001/api/admin/events/${event.id}`, config);
+            fetchEvents(); // Refresh the list
+            alert('Event deleted successfully');
+          } catch (error) {
+            console.error('Error deleting event:', error);
+            alert('Error deleting event');
+          }
+        }
+        break;
+      default:
+        console.warn(`Unknown action: ${actionId}`);
+        break;
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      {/* Dropdown Trigger */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="inline-flex items-center justify-center w-8 h-8 text-gray-400 bg-white rounded-full hover:text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        aria-label="More actions"
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute right-0 z-50 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+          {actions.map((action, index) => {
+            const IconComponent = action.icon;
+            
+            return (
+              <div key={action.id}>
+                {action.separator && index > 0 && (
+                  <div className="border-t border-gray-100 my-1" />
+                )}
+                <button
+                  onClick={() => handleActionClick(action.id)}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center space-x-3 transition-colors ${action.color}`}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  <span>{action.label}</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [events, setEvents] = useState([]);
@@ -30,6 +169,29 @@ const AdminDashboard = ({ user, onLogout }) => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const token = localStorage.getItem('authToken');
+  const config = {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+
+  // Helper function to determine event status
+  const getEventStatus = (startDateTime, endDateTime) => {
+    const now = new Date();
+    const start = new Date(startDateTime);
+    const end = endDateTime ? new Date(endDateTime) : null;
+
+    if (now < start) {
+      return { text: 'Active', color: 'bg-blue-100 text-blue-800' };
+    } else if (end && now >= start && now <= end) {
+      return { text: 'Ongoing', color: 'bg-green-100 text-green-800' };
+    } else {
+      return { text: 'Past', color: 'bg-gray-100 text-gray-800' };
+    }
   };
 
   useEffect(() => {
@@ -163,58 +325,40 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {events.map((event) => (
-                      <tr key={event.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{event.name}</div>
-                            <div className="text-sm text-gray-500">{event.short_descrip}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {formatDate(event.start_datetime)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {event.location}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            new Date(event.start_datetime) > new Date()
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {new Date(event.start_datetime) > new Date() ? 'Upcoming' : 'Past'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm space-x-2">
-                          <Link
-                            to={`/events/${event.id}`}
-                            state={{ fromAdmin: true }}
-                            className="text-brand-blue hover:text-brand-blue-light font-medium"
-                          >
-                            View
-                          </Link>
-                          <button 
-                            onClick={async () => {
-                              try {
-                                const response = await axios.get(`http://localhost:3001/api/events/${event.id}`);
-                                setSelectedEvent(response.data);
-                                setShowEventForm(true);
-                              } catch (error) {
-                                console.error('Error loading event:', error);
-                                alert('Error loading event');
-                              }
-                            }}
-                            className="text-indigo-600 hover:text-indigo-900 font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900 font-medium">
-                            Tickets
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {events.map((event) => {
+                      const status = getEventStatus(event.start_datetime, event.end_datetime);
+                      
+                      return (
+                        <tr key={event.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{event.name}</div>
+                              <div className="text-sm text-gray-500">{event.short_descrip}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {formatDate(event.start_datetime)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {event.location}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status.color}`}>
+                              {status.text}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <EventActionsDropdown 
+                              event={event} 
+                              setSelectedEvent={setSelectedEvent}
+                              setShowEventForm={setShowEventForm}
+                              fetchEvents={fetchEvents}
+                              config={config}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
