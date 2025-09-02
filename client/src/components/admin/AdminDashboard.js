@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Edit, Ticket, BarChart3, Trash2, MoreHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import EditForm from './EditForm';
+import EventEditForm from './EventEditForm';
 import CreateForm from './CreateForm';
+import TicketManagementModal from './TicketManagementModal';
 
-const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm, fetchEvents, config }) => {
+const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm,setSelectedEventForTickets, setShowTicketModal , fetchEvents, config }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -76,9 +77,16 @@ const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm, fetch
         break;
         
       case 'tickets':
-        // Navigate to manage tickets page
+        setSelectedEventForTickets(event);
+        setShowTicketModal(true);
+        // try {
+        //   const response = await axios.get(`http://localhost:3001/api/admin/events/${event.id}/tickets`, config);
+        //   setSelectedEvent({ ...event, tickets: response.data });
+        // } catch (error) {
+        //   console.error('Error loading event tickets:', error);
+        //   alert('Error loading event');
+        // }
         console.log(`Managing tickets for: ${event.name}`);
-        // TODO: Implement navigation to tickets page
         break;
         
       case 'analytics':
@@ -149,6 +157,9 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('events');
   const [showEventForm, setShowEventForm] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [selectedEventForTickets, setSelectedEventForTickets] = useState(null);
+
 
   const fetchEvents = async () => {
     try {
@@ -172,6 +183,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   };
 
   const token = localStorage.getItem('authToken');
+  
   const config = {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -354,6 +366,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                               setShowEventForm={setShowEventForm}
                               fetchEvents={fetchEvents}
                               config={config}
+                              setSelectedEventForTickets={setSelectedEventForTickets}
+                              setShowTicketModal={setShowTicketModal}    
                             />
                           </td>
                         </tr>
@@ -383,9 +397,23 @@ const AdminDashboard = ({ user, onLogout }) => {
         )}
       </div>
 
-      {/* Event Modal */}
+      {/* Event Modal - Create */}
+      {showEventForm && !selectedEvent && (
+        <CreateForm
+          onClose={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
+          }}
+          onSuccess={() => {
+            setShowEventForm(false);
+            setSelectedEvent(null);
+            fetchEvents();
+          }}
+        />
+      )}
+      {/* Event Modal - Edit */}
       {showEventForm && selectedEvent && (
-        <EditForm
+        <EventEditForm
           event={selectedEvent}
           onClose={() => {
             setShowEventForm(false);
@@ -399,16 +427,17 @@ const AdminDashboard = ({ user, onLogout }) => {
         />
       )}
 
-      {showEventForm && !selectedEvent && (
-        <CreateForm
+      {/* Ticket Modal */}
+      {showTicketModal && (
+        <TicketManagementModal
+          event={selectedEventForTickets}
+          isOpen={showTicketModal}
           onClose={() => {
-            setShowEventForm(false);
-            setSelectedEvent(null);
+            setShowTicketModal(false);
+            setSelectedEventForTickets(null);
           }}
           onSuccess={() => {
-            setShowEventForm(false);
-            setSelectedEvent(null);
-            fetchEvents();
+            // Optional: refresh events list or show success message
           }}
         />
       )}

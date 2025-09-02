@@ -162,4 +162,87 @@ router.get('/events/:id', async (req, res) => {
 });
 
 
+// HTTP Routes for Tickets (GET, POST, PUT, DELETE)
+// GET api/admin/events/:eventId/tickets
+router.get('/events/:eventId/tickets', async (req, res) => {
+  const eventId = req.params.eventId;
+  try {
+    const tickets = await prisma.eventTicket.findMany({
+      where: { event_id: eventId }
+    });
+    res.json(tickets);
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    res.status(500).json({ error: 'Failed to fetch tickets' });
+  }
+});
+
+//DELETE api/admin/events/:eventId/tickets/:ticketId
+router.delete('/events/:eventId/tickets/:ticketId', async (req, res) => {
+  const { eventId, ticketId } = req.params;
+  try {
+    await prisma.eventTicket.delete({
+      where: {
+        id: ticketId,
+        event_id: eventId
+      }
+    });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting ticket:', error);
+    res.status(500).json({ error: 'Failed to delete ticket' });
+  }
+});
+
+// POST api/admin/events/:eventId/tickets
+router.post('/events/:eventId/tickets', async (req, res) => {
+  const eventId = req.params.eventId;
+  const { classification, quantity, cost, includes_item, item_name } = req.body;
+
+  try {
+    const newTicket = await prisma.eventTicket.create({
+      data: {
+        classification,
+        quantity,
+        cost,
+        includes_item,
+        item_name,
+        event: {
+          connect: { id: eventId }
+        }
+      }
+    });
+    res.status(201).json(newTicket);
+  } catch (error) {
+    console.error('Error creating ticket:', error);
+    res.status(500).json({ error: 'Failed to create ticket' });
+  }
+});
+
+//PUT api/admin/events/:eventId/tickets/:ticketId
+router.put('/events/:eventId/tickets/:ticketId', async (req, res) => {
+  const { eventId, ticketId } = req.params;
+  const { classification, quantity, cost, includes_item, item_name } = req.body;
+
+  try {
+    const updatedTicket = await prisma.eventTicket.update({
+      where: {
+        id: ticketId,
+        event_id: eventId
+      },
+      data: {
+        classification,
+        quantity,
+        cost,
+        includes_item,
+        item_name
+      }
+    });
+    res.json(updatedTicket);
+  } catch (error) {
+    console.error('Error updating ticket:', error);
+    res.status(500).json({ error: 'Failed to update ticket' });
+  }
+});
+
 module.exports = router;
