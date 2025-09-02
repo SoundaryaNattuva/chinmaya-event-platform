@@ -137,5 +137,29 @@ router.put('/events/:id', async (req, res) => {
   }
 });
 
+// GET api/admin/events/:id - Get single event for editing
+router.get('/events/:id', async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    console.log('Getting event:', eventId);
+    
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        eventTickets: true  // Include tickets if needed
+      }
+    });
+    
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.json(event);
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({ error: 'Failed to fetch event' });
+  }
+});
+
 
 module.exports = router;

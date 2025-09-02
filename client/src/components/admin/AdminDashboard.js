@@ -66,7 +66,7 @@ const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm, fetch
         
       case 'edit':
         try {
-          const response = await axios.get(`http://localhost:3001/api/admin/events/${event.id}`);
+          const response = await axios.get(`http://localhost:3001/api/admin/events/${event.id}`, config);
           setSelectedEvent(response.data);
           setShowEventForm(true);
         } catch (error) {
