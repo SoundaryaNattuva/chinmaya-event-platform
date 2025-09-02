@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, Edit, Ticket, BarChart3, Trash2, MoreHorizontal } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import EventEditForm from './EventEditForm';
 import CreateForm from './CreateForm';
 import TicketManagementModal from './TicketManagementModal';
 
-const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm,setSelectedEventForTickets, setShowTicketModal , fetchEvents, config }) => {
+const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm,setSelectedEventForTickets, setShowTicketModal , fetchEvents, config, navigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -62,7 +62,7 @@ const EventActionsDropdown = ({ event, setSelectedEvent, setShowEventForm,setSel
     switch (actionId) {
       case 'view':
         // Navigate to view event page
-        window.location.href = `/events/${event.id}`;
+        navigate(`/events/${event.id}`, { state: { fromAdmin: true } });
         break;
         
       case 'edit':
@@ -182,6 +182,8 @@ const AdminDashboard = ({ user, onLogout }) => {
     });
   };
 
+  const navigate = useNavigate();
+
   const token = localStorage.getItem('authToken');
   
   const config = {
@@ -207,8 +209,18 @@ const AdminDashboard = ({ user, onLogout }) => {
   };
 
   useEffect(() => {
+    // Check authentication first
+    const token = localStorage.getItem('authToken');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    
+    if (!token || !user || user.role !== 'ADMIN') {
+      navigate('/staff/login');
+      return;
+    }
+    
+    // Only fetch events if authenticated
     fetchEvents();
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -367,7 +379,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                               fetchEvents={fetchEvents}
                               config={config}
                               setSelectedEventForTickets={setSelectedEventForTickets}
-                              setShowTicketModal={setShowTicketModal}    
+                              setShowTicketModal={setShowTicketModal}
+                              navigate={navigate}
                             />
                           </td>
                         </tr>

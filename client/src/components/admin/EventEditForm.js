@@ -59,36 +59,7 @@ const EventEditForm = ({ event, onClose, onSuccess }) => {
       [field]: value
     }));
   };
-  // update form state of ticket as you type
-  const handleTicketChange = (ticketId, field, value) => {
-    setTickets(prev => prev.map(ticket => 
-      ticket.id === ticketId 
-        ? { ...ticket, [field]: value }
-        : ticket
-    ));
-  };
-
-  const addTicket = () => {
-    const newTicket = {
-      id: `new-${Date.now()}`,
-      classification: '',
-      cost: 0,
-      quantity: 0,
-      includes_item: false,
-      item_name: '',
-      sold_count: 0
-    };
-    setTickets(prev => [...prev, newTicket]);
-  };
-
-  const removeTicket = (ticketId) => {
-    setTickets(prev => prev.filter(ticket => ticket.id !== ticketId));
-  };
-
-  const canEditTicket = (ticket) => {
-    return ticket.sold_count === 0;
-  };
-
+  
   // Load Google Maps API
   useEffect(() => {
     if (!window.google) {

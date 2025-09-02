@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import EventEditForm from '../admin/EventEditForm'; // Import your existing edit form
+import TicketManagementModal from '../admin/TicketManagementModal'; // Import your existing ticket modal
+
 
 const EventDetail = () => {
   const { eventId } = useParams();
@@ -10,44 +13,85 @@ const EventDetail = () => {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Modals - Also used in Admin Dashboard
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false)
   
   // Check if user came from admin dashboard
   const isAdminView = location.state?.fromAdmin || false;
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const isAdmin = user && user.role === 'ADMIN';
 
+  // Auth config
+  const token = localStorage.getItem('authToken');
+  const config = {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+
   // Purchase form state
   const [selectedTickets, setSelectedTickets] = useState({});
 
-useEffect(() => {
-  const fetchEventDetails = async () => {
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3001/api/events/${eventId}`);
+        setEvent(response.data);
+      } catch (error) {
+        setError('Event not found');
+        console.error('Error fetching event:', error);
+      }
+    };
+
+    const fetchTicketTypes = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3001/api/tickets/event/${eventId}`);
+        setTicketTypes(response.data);
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadEventData = async () => {
+      await fetchEventDetails();
+      await fetchTicketTypes();
+    };
+
+    loadEventData();
+  }, [eventId]);
+
+    // Refresh event data after edits
+  const refreshEventData = async () => {
     try {
       const response = await axios.get(`http://localhost:3001/api/events/${eventId}`);
       setEvent(response.data);
     } catch (error) {
-      setError('Event not found');
-      console.error('Error fetching event:', error);
+      console.error('Error refreshing event:', error);
     }
   };
 
-  const fetchTicketTypes = async () => {
+  // Handle edit button click
+  const handleEditEvent = async () => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/tickets/event/${eventId}`);
-      setTicketTypes(response.data);
+      // Fetch the latest event data for editing (admin endpoint for complete data)
+      const response = await axios.get(`http://localhost:3001/api/admin/events/${eventId}`, config);
+      setEvent(response.data);
+      setShowEditForm(true);
     } catch (error) {
-      console.error('Error fetching tickets:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading event for editing:', error);
+      alert('Error loading event for editing');
     }
   };
 
-  const loadEventData = async () => {
-    await fetchEventDetails();
-    await fetchTicketTypes();
+  // Handle manage tickets button click
+  const handleManageTickets = () => {
+    setShowTicketModal(true);
   };
-
-  loadEventData();
-}, [eventId]);
 
   const handleTicketSelect = (ticketTypeId, quantity) => {
     setSelectedTickets(prev => ({
@@ -58,7 +102,7 @@ useEffect(() => {
 
   const calculateTotal = () => {
     return Object.entries(selectedTickets).reduce((total, [ticketTypeId, quantity]) => {
-      const ticketType = ticketTypes.find(t => t.id === ticketTypeId);
+      const ticketType = ticketTypes.find(t => String(t.id) === String(ticketTypeId));
       return total + (ticketType ? ticketType.cost * quantity : 0);
     }, 0);
   };
@@ -79,10 +123,19 @@ useEffect(() => {
   };
 
   const handleBackClick = () => {
-    if (isAdminView && isAdmin) {
-      navigate('/staff/dashboard');
+    if (isAdmin) {
+      navigate('/staff/dashboard', { replace: true });
     } else {
-      navigate('/');
+      navigate('/', { replace: true });
+    }
+  };
+
+  const refreshTicketTypes = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/tickets/event/${eventId}`);
+      setTicketTypes(response.data);
+    } catch (error) {
+      console.error('Error refreshing ticket types:', error);
     }
   };
 
@@ -155,7 +208,7 @@ useEffect(() => {
           onClick={handleBackClick}
           className="text-brand-blue hover:text-brand-blue-light mb-6 inline-block"
         >
-          ← {isAdminView ? 'Back to Event Management' : 'Back to Events'}
+          ← {isAdmin ? 'Back to Event Management' : 'Back to Events'}
         </button>
 
         <div className="grid lg:grid-cols-2 gap-12">
@@ -203,10 +256,16 @@ useEffect(() => {
                   <div className="border-t pt-6">
                     <h4 className="font-medium text-gray-900 mb-3">Admin Actions</h4>
                     <div className="flex space-x-3">
-                      <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                      <button 
+                        onClick={handleEditEvent} 
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
                         Edit Event
                       </button>
-                      <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                      <button 
+                        onClick={handleManageTickets} 
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
                         Manage Tickets
                       </button>
                       <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
@@ -315,6 +374,30 @@ useEffect(() => {
           )}
         </div>
       </div>
+
+      {/* Edit Event Modal */}
+      {showEditForm && (
+        <EventEditForm
+          event={event}
+          onClose={() => setShowEditForm(false)}
+          onSuccess={() => {
+            setShowEditForm(false);
+            refreshEventData(); // Refresh the event data after successful edit
+          }}
+        />
+      )}
+
+      {/* Ticket Management Modal */}
+      {showTicketModal && (
+        <TicketManagementModal
+          event={event}
+          isOpen={showTicketModal}
+          onClose={() => setShowTicketModal(false)}
+          onSuccess={() => {
+            refreshTicketTypes();
+          }}
+        />
+      )}
     </div>
   );
 };

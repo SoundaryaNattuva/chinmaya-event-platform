@@ -114,7 +114,9 @@ const TicketManagementModal = ({ event, isOpen, onClose, onSuccess }) => {
         includes_item: false,
         item_name: ''
       });
+      setShowAddForm(false);
       fetchTickets();
+      onSuccess();
       alert('Ticket created successfully!');
     } catch (error) {
       console.error('Error creating ticket:', error);
