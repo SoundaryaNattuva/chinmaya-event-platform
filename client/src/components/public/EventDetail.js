@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import EventEditForm from '../admin/EventEditForm'; // Import your existing edit form
-import TicketManagementModal from '../admin/TicketManagementModal'; // Import your existing ticket modal
+import TicketManagementModal from '../admin/TicketManagementModal';
+import TicketPurchaseModal from './TicketPurchaseModal'
 
 
 const EventDetail = () => {
@@ -13,6 +14,8 @@ const EventDetail = () => {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+
 
   // Modals - Also used in Admin Dashboard
   const [showEditForm, setShowEditForm] = useState(false);
@@ -336,12 +339,11 @@ const EventDetail = () => {
                           <span>${formatPrice(calculateTotal())}</span>
                         </div>
                       </div>
-                      
                       <button
-                        onClick={() => alert('Purchase functionality coming soon! We\'ll build this next.')}
+                        onClick={() => setShowPurchaseModal(true)}
                         className="w-full bg-brand-orange hover:bg-brand-orange-light text-white py-3 px-4 rounded-lg font-medium transition-colors"
                       >
-                        Continue to Purchase (Coming Soon)
+                        Get Tickets
                       </button>
                     </div>
                   )}
@@ -396,6 +398,16 @@ const EventDetail = () => {
           onSuccess={() => {
             refreshTicketTypes();
           }}
+        />
+      )}
+
+      {/* Purchase Modal */}
+      {showPurchaseModal && (
+        <TicketPurchaseModal
+          event={event}
+          ticketTypes={ticketTypes}
+          isOpen={showPurchaseModal}
+          onClose={() => setShowPurchaseModal(false)}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Homepage from './components/public/Homepage';
 import EventDetail from './components/public/EventDetail';
+import Checkout from './components/public/Checkout'; 
 import Login from './components/Login';
 import AdminDashboard from './components/admin/AdminDashboard';
 import './App.css';
@@ -44,7 +45,10 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<Homepage />} />
         <Route path="/events/:eventId" element={<EventDetail />} />
-        
+
+        {/* Checkout Routes */}
+        <Route path="/events/:eventId/checkout" element={<Checkout />} />
+
         {/* Staff Routes */}
         <Route 
           path="/staff/login" 
