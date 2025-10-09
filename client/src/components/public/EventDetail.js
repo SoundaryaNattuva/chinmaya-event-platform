@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import EventEditForm from '../admin/EventEditForm'; // Import your existing edit form
+import EventEditForm from '../admin/EventEditForm'; 
 import TicketManagementModal from '../admin/TicketManagementModal';
 import TicketPurchaseModal from './TicketPurchaseModal'
 
@@ -132,6 +132,33 @@ const EventDetail = () => {
       navigate('/', { replace: true });
     }
   };
+
+const handleProceedToCheckout = () => {
+  console.log('Button clicked! Selected tickets:', selectedTickets);
+  
+  // Create an array of ticket objects instead
+  const cartItems = Object.entries(selectedTickets)
+    .filter(([id, quantity]) => quantity > 0)
+    .map(([id, quantity]) => {
+      const ticketType = ticketTypes.find(t => String(t.id) === String(id));
+      return {
+        id: id,
+        type: ticketType?.classification || 'Unknown',
+        quantity: quantity,
+        price: ticketType?.cost / 100 || 0 // Convert from cents to dollars
+      };
+    });
+  
+  console.log('Cart items:', cartItems);
+  
+  navigate(`/events/${eventId}/checkout`, {
+    state: { 
+      selectedTickets: cartItems, // Now it's an array
+      ticketTypes: ticketTypes,
+      eventInfo: event
+    }
+  });
+};
 
   const refreshTicketTypes = async () => {
     try {
@@ -340,10 +367,10 @@ const EventDetail = () => {
                         </div>
                       </div>
                       <button
-                        onClick={() => setShowPurchaseModal(true)}
+                        onClick={handleProceedToCheckout}
                         className="w-full bg-brand-orange hover:bg-brand-orange-light text-white py-3 px-4 rounded-lg font-medium transition-colors"
                       >
-                        Get Tickets
+                        Continue to Checkout
                       </button>
                     </div>
                   )}

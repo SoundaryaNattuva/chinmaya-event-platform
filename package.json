@@ -1,7 +1,10 @@
 {
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.2.0",
+    "@stripe/stripe-js": "^8.0.0",
     "axios": "^1.11.0",
-    "react-router-dom": "^7.8.1"
+    "react-router-dom": "^7.8.1",
+    "stripe": "^19.1.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
