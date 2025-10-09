@@ -3,6 +3,7 @@ const cors = require('cors');
 const { authenticateToken, requireAdmin, requireStaff } = require('./middleware/auth'); 
 require('dotenv').config();
 
+
 const app = express();
 
 // Middleware
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/api/events', require('./routes/events'));
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/purchases', require('./routes/purchases'));
 
 // Protected Routes
 app.use('/api/admin', authenticateToken, requireAdmin, require('./routes/admin'));
