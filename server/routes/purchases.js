@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
+import * as purchasesCtrl from '../controllers/purchases.js';
 const router = express.Router();
-const { processPurchase } = require('../controllers/purchaseController');
 
-router.post('/process', processPurchase);
+router.post('/purchases', purchasesCtrl.processPurchase);
 
-module.exports = router;
+export default router;

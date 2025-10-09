@@ -1,6 +1,7 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express';
 import * as adminCtrl from '../controllers/admin.js'
+
+const router = express.Router();
 
 // Event routes
 router.post('/events', adminCtrl.createEvent);

@@ -1,8 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
-const crypto = require('crypto');
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
+import crypto from 'crypto';
 
-const createTicketType = async (req, res) => {
+export const createTicketType = async (req, res) => {
   try {
     const {
       event_id,
@@ -31,7 +30,7 @@ const createTicketType = async (req, res) => {
   }
 };
 
-const getTicketsByEvent = async (req, res) => {
+export const getTicketsByEvent = async (req, res) => {
   try {
     const ticketTypes = await prisma.eventTicket.findMany({
       where: { event_id: req.params.eventId },
@@ -56,7 +55,7 @@ const getTicketsByEvent = async (req, res) => {
   }
 };
 
-const purchaseTickets = async (req, res) => {
+export const purchaseTickets = async (req, res) => {
   try {
     const {
       event_id,
@@ -118,10 +117,4 @@ const purchaseTickets = async (req, res) => {
     console.error('Error purchasing tickets:', error);
     res.status(500).json({ error: 'Failed to purchase tickets' });
   }
-};
-
-module.exports = {
-  createTicketType,
-  getTicketsByEvent,
-  purchaseTickets
 };

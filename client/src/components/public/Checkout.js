@@ -167,6 +167,46 @@ const CheckoutFlow = () => {
 
   const handlePrev = () => setCurrentStep(prev => Math.max(1, prev - 1));
 
+  // Add this function in your CheckoutFlow component, before the return statement
+
+  const createPurchase = async () => {
+    try {
+      const purchaseData = {
+        eventId: eventId,
+        purchaserInfo: {
+          email: formData.purchaser.email,
+          firstName: formData.purchaser.firstName,
+          lastName: formData.purchaser.lastName,
+          phone: formData.purchaser.phone
+        },
+        // This sends all ticket holder names (Ram, Sam, Leo, Parth)
+        ticketHolders: formData.ticketHolders.map(holder => ({
+          type: holder.type,
+          firstName: holder.firstName,
+          lastName: holder.lastName
+        })),
+        // This sends the ticket type info for inventory management
+        selectedTickets: selectedTickets.map(ticket => ({
+          id: ticket.id,
+          type: ticket.type,
+          quantity: ticket.quantity,
+          price: ticket.price
+        })),
+        totalAmount: finalTotal
+      };
+
+      console.log('Sending purchase data:', purchaseData);
+
+      const response = await axios.post('http://localhost:3001/api/purchases', purchaseData);
+      
+      console.log('Purchase created successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating purchase:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
   const totalTickets = selectedTickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
   const totalPrice = selectedTickets.reduce((sum, ticket) => sum + (ticket.quantity * ticket.price), 0);
   const serviceeFee = totalPrice * 0.05;
@@ -335,7 +375,15 @@ const CheckoutFlow = () => {
               <StripePayment
                 totalAmount={finalTotal}
                 purchaserEmail={formData.purchaser.email}
-                onSuccess={() => setCurrentStep(3)}
+                onSuccess={async () => {
+                  try {
+                    await createPurchase(); // Save to database AFTER payment succeeds
+                    setCurrentStep(3);
+                  } catch (error) {
+                    alert('Payment succeeded but there was an error saving your tickets. Please contact support.');
+                    console.error('Purchase creation failed:', error);
+                  }
+                }}
                 onBack={handlePrev}
               >
               </StripePayment>

@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
 
-const scanTicket = async (req, res) => {
+export const scanTicket = async (req, res) => {
   try {
     const { qr_code } = req.body;
 
@@ -64,7 +63,7 @@ const scanTicket = async (req, res) => {
   }
 };
 
-const completeCheckin = async (req, res) => {
+export const completeCheckin = async (req, res) => {
   try {
     console.log('req.body:', req.body);
     const { ticket_id, item_given, volunteer_name } = req.body;
@@ -94,9 +93,4 @@ const completeCheckin = async (req, res) => {
     console.error('Error completing check-in:', error);
     res.status(500).json({ error: 'Failed to complete check-in' });
   }
-};
-
-module.exports = {
-  scanTicket,
-  completeCheckin
 };

@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
 
-const processPurchase = async (req, res) => {
+export const processPurchase = async (req, res) => {
   try {
     const { 
       eventId, 
@@ -90,8 +89,4 @@ const processPurchase = async (req, res) => {
       error: error.message 
     });
   }
-};
-
-module.exports = {
-  processPurchase
 };

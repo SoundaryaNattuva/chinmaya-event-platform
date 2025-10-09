@@ -1,11 +1,13 @@
-const express = require('express');
+import express from 'express';
+
+import * as checkinCtrl from '../controllers/checkin.js';
+
 const router = express.Router();
-const { scanTicket, completeCheckin } = require('../controllers/checkinController');
 
 // POST /api/checkin/scan - Scan QR code
-router.post('/scan', scanTicket);
+router.post('/scan', checkinCtrl.scanTicket);
 
 // POST /api/checkin/complete - Complete check-in
-router.post('/complete', completeCheckin);
+router.post('/complete', checkinCtrl.completeCheckin);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
 
 // Helper function to check if any tickets have been sold
 const hasTicketSales = async (eventId) => {
@@ -11,7 +10,7 @@ const hasTicketSales = async (eventId) => {
 };
 
 // EVENT CONTROLLERS
-const createEvent = async (req, res) => {
+export const createEvent = async (req, res) => {
   console.log('Received payload:', req.body);
   try {
     const {
@@ -65,7 +64,7 @@ const createEvent = async (req, res) => {
   }
 };
 
-const deleteEvent = async (req, res) => {
+export const deleteEvent = async (req, res) => {
   const eventId = req.params.id;
   console.log('Deleting event:', eventId);
   
@@ -87,7 +86,7 @@ const deleteEvent = async (req, res) => {
   }
 };
 
-const updateEvent = async (req, res) => {
+export const updateEvent = async (req, res) => {
   try {
     const { 
       name, 
@@ -124,7 +123,7 @@ const updateEvent = async (req, res) => {
   }
 };
 
-const getEvent = async (req, res) => {
+export const getEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     console.log('Getting event:', eventId);
@@ -148,7 +147,7 @@ const getEvent = async (req, res) => {
 };
 
 // TICKET CONTROLLERS
-const getTickets = async (req, res) => {
+export const getTickets = async (req, res) => {
   const eventId = req.params.eventId;
   
   try {
@@ -162,7 +161,7 @@ const getTickets = async (req, res) => {
   }
 };
 
-const createTicket = async (req, res) => {
+export const createTicket = async (req, res) => {
   const eventId = req.params.eventId;
   const { classification, quantity, cost, includes_item, item_name } = req.body;
 
@@ -186,7 +185,7 @@ const createTicket = async (req, res) => {
   }
 };
 
-const updateTicket = async (req, res) => {
+export const updateTicket = async (req, res) => {
   const { eventId, ticketId } = req.params;
   const { classification, quantity, cost, includes_item, item_name } = req.body;
 
@@ -211,7 +210,7 @@ const updateTicket = async (req, res) => {
   }
 };
 
-const deleteTicket = async (req, res) => {
+export const deleteTicket = async (req, res) => {
   const { eventId, ticketId } = req.params;
   
   try {
@@ -226,17 +225,4 @@ const deleteTicket = async (req, res) => {
     console.error('Error deleting ticket:', error);
     res.status(500).json({ error: 'Failed to delete ticket' });
   }
-};
-
-module.exports = {
-  // Event controllers
-  createEvent,
-  deleteEvent,
-  updateEvent,
-  getEvent,
-  // Ticket controllers
-  getTickets,
-  createTicket,
-  updateTicket,
-  deleteTicket
 };

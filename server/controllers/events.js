@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
 
-const getAllEvents = async (req, res) => {
+export const getAllEvents = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       include: {
@@ -20,7 +19,7 @@ const getAllEvents = async (req, res) => {
   }
 };
 
-const getEventById = async (req, res) => {
+export const getEventById = async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: req.params.id },
@@ -41,9 +40,4 @@ const getEventById = async (req, res) => {
     console.error('Error fetching event:', error);
     res.status(500).json({ error: 'Failed to fetch event' });
   }
-};
-
-module.exports = {
-  getAllEvents,
-  getEventById
 };
