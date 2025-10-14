@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
+import sendTicketConfirmation from '../services/emailService.js';
 
 export const processPurchase = async (req, res) => {
   try {
@@ -20,6 +21,10 @@ export const processPurchase = async (req, res) => {
         error: 'Missing required fields' 
       });
     }
+
+    // Generate order ID BEFORE transaction so that all tickets share the same order ID
+    const orderId = `ORD-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    console.log('Generated Order ID:', orderId);
 
     // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
@@ -73,6 +78,7 @@ export const processPurchase = async (req, res) => {
               purchaser_phone: purchaserInfo.phone,
               assigned_name: `${holder.firstName} ${holder.lastName}`,
               qr_code: qrCode,
+              order_id: orderId,
               item: eventTicket.includes_item,
               checked_in: false,
               item_collected: false
@@ -91,11 +97,58 @@ export const processPurchase = async (req, res) => {
     });
 
     console.log('✅ Purchase successful! Created', result.totalTickets, 'tickets');
-       res.json({ 
+    
+    // Get event details for email
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        name: true,
+        start_datetime: true,
+        location: true
+      }
+    });
+
+    // Format tickets for email
+    const ticketsForEmail = selectedTickets.map(selectedTicket => ({
+      type: selectedTicket.type,
+      quantity: selectedTicket.quantity,
+      price: selectedTicket.price,
+      qrCode: null // placeholder - need to generate QR code images
+    }));
+
+    // Send confirmation email
+    try {
+      console.log('📧 Attempting to send confirmation email...');
+      
+      await sendTicketConfirmation({
+        to: purchaserInfo.email,
+        customerName: `${purchaserInfo.firstName} ${purchaserInfo.lastName}`,
+        eventName: event.name,
+        eventDate: new Date(event.start_datetime).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit'
+        }),
+        eventLocation: event.location,
+        tickets: ticketsForEmail,
+        totalAmount: totalAmount.toFixed(2),
+        orderId: orderId
+      });
+      
+      console.log('✅ Confirmation email sent to', purchaserInfo.email);
+    } catch (emailError) {
+      // Log error but don't fail the purchase
+      console.error('⚠️ Failed to send confirmation email:', emailError.message);
+    }
+
+    res.json({ 
       success: true, 
       message: 'Purchase completed successfully',
       totalTickets: result.totalTickets,
-      purchaseId: result.tickets[0]?.id // Return first ticket ID as reference
+      orderId: orderId
     });
 
   } catch (error) {

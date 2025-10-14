@@ -62,6 +62,7 @@ model PurchasedTicket {
   purchase_date   DateTime    @default(now())
   checked_in_at   DateTime?
   checked_in_by   String?
+  order_id        String?
   event           Event       @relation(fields: [event_id], references: [id])
   eventTicket     EventTicket @relation(fields: [event_ticket_id], references: [id])
 }
