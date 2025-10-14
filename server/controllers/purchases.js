@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import crypto from 'crypto';
 
 export const processPurchase = async (req, res) => {
   try {
@@ -10,6 +11,8 @@ export const processPurchase = async (req, res) => {
       totalAmount 
     } = req.body;
 
+    console.log('Processing purchase:', { eventId, purchaserInfo, ticketHolders, selectedTickets });
+
     // Validate required fields
     if (!eventId || !purchaserInfo || !selectedTickets || !totalAmount) {
       return res.status(400).json({ 
@@ -20,70 +23,83 @@ export const processPurchase = async (req, res) => {
 
     // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create the purchase record
-      const purchase = await tx.purchase.create({
-        data: {
-          event_id: parseInt(eventId),
-          purchaser_email: purchaserInfo.email,
-          purchaser_first_name: purchaserInfo.firstName,
-          purchaser_last_name: purchaserInfo.lastName,
-          purchaser_phone: purchaserInfo.phone,
-          total_amount: totalAmount,
-          status: 'COMPLETED'
-        }
-      });
+      const purchasedTickets = [];
 
-      // 2. Update ticket inventory and create ticket records
-      for (const ticket of selectedTickets) {
-        const ticketType = await tx.ticketType.findUnique({
-          where: { id: parseInt(ticket.id) }
-        });
-
-        // Check if ticket type exists
-        if (!ticketType) {
-          throw new Error(`Ticket type with ID ${ticket.id} not found`);
-        }
-
-        // Check if enough tickets available
-        if (ticketType.available < ticket.quantity) {
-          throw new Error(`Not enough ${ticket.type} tickets available`);
-        }
-
-        // Update ticket counts
-        await tx.ticketType.update({
-          where: { id: parseInt(ticket.id) },
-          data: {
-            sold: ticketType.sold + ticket.quantity,
-            available: ticketType.available - ticket.quantity
+      // Process each ticket type
+      for (const selectedTicket of selectedTickets) {
+        // Get the EventTicket info
+        const eventTicket = await tx.eventTicket.findUnique({
+          where: { id: selectedTicket.id },
+          include: {
+            _count: {
+              select: { purchasedTickets: true }
+            }
           }
         });
 
-        // Create individual ticket records for each ticket holder
-        const holdersForThisType = ticketHolders.filter(h => h.type === ticket.type);
+        if (!eventTicket) {
+          throw new Error(`Ticket type with ID ${selectedTicket.id} not found`);
+        }
+
+        // Check if enough tickets available
+        const soldCount = eventTicket._count.purchasedTickets;
+        const available = eventTicket.quantity - soldCount;
+        
+        console.log(`Ticket ${selectedTicket.type}: ${available} available (${eventTicket.quantity} total, ${soldCount} sold)`);
+        
+        if (available < selectedTicket.quantity) {
+          throw new Error(`Not enough ${selectedTicket.type} tickets available. Only ${available} left.`);
+        }
+
+        // Get ticket holders for this ticket type
+        const holdersForThisType = ticketHolders.filter(h => h.type === selectedTicket.type);
+        
+        console.log(`Creating ${holdersForThisType.length} tickets for ${selectedTicket.type}`);
+        
+        if (holdersForThisType.length !== selectedTicket.quantity) {
+          throw new Error(`Mismatch: expected ${selectedTicket.quantity} holders for ${selectedTicket.type}, got ${holdersForThisType.length}`);
+        }
+
+        // Create individual PurchasedTicket records for each holder
         for (const holder of holdersForThisType) {
-          await tx.ticket.create({
+          const qrCode = `QR_${Date.now()}_${crypto.randomUUID().replace(/-/g, '').substring(0, 9)}`;
+          
+          const purchasedTicket = await tx.purchasedTicket.create({
             data: {
-              purchase_id: purchase.id,
-              ticket_type_id: parseInt(ticket.id),
-              holder_first_name: holder.firstName,
-              holder_last_name: holder.lastName,
-              status: 'ACTIVE'
+              event_id: eventId,
+              event_ticket_id: selectedTicket.id,
+              purchaser_name: `${purchaserInfo.firstName} ${purchaserInfo.lastName}`,
+              purchaser_email: purchaserInfo.email,
+              purchaser_phone: purchaserInfo.phone,
+              assigned_name: `${holder.firstName} ${holder.lastName}`,
+              qr_code: qrCode,
+              item: eventTicket.includes_item,
+              checked_in: false,
+              item_collected: false
             }
           });
+          
+          purchasedTickets.push(purchasedTicket);
+          console.log(`Created ticket for ${holder.firstName} ${holder.lastName} with QR: ${qrCode}`);
         }
       }
 
-      return purchase;
+      return { 
+        tickets: purchasedTickets,
+        totalTickets: purchasedTickets.length 
+      };
     });
 
-    res.json({ 
+    console.log('✅ Purchase successful! Created', result.totalTickets, 'tickets');
+       res.json({ 
       success: true, 
-      purchaseId: result.id,
-      message: 'Purchase completed successfully' 
+      message: 'Purchase completed successfully',
+      totalTickets: result.totalTickets,
+      purchaseId: result.tickets[0]?.id // Return first ticket ID as reference
     });
 
   } catch (error) {
-    console.error('Purchase processing error:', error);
+    console.error('❌ Purchase processing error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message 
