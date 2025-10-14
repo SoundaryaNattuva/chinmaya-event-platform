@@ -200,6 +200,7 @@ const CheckoutFlow = () => {
       const response = await axios.post('http://localhost:3001/api/purchases', purchaseData);
       
       console.log('Purchase created successfully:', response.data);
+      
       return response.data;
     } catch (error) {
       console.error('Error creating purchase:', error.response?.data || error.message);

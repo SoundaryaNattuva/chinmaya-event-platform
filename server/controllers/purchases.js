@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
 import sendTicketConfirmation from '../services/emailService.js';
+import { generateQRCodesForTickets } from '../utils/qrCodeGenerator.js';
 
 export const processPurchase = async (req, res) => {
   try {
@@ -14,7 +15,6 @@ export const processPurchase = async (req, res) => {
 
     console.log('Processing purchase:', { eventId, purchaserInfo, ticketHolders, selectedTickets });
 
-    // Validate required fields
     if (!eventId || !purchaserInfo || !selectedTickets || !totalAmount) {
       return res.status(400).json({ 
         success: false, 
@@ -22,17 +22,13 @@ export const processPurchase = async (req, res) => {
       });
     }
 
-    // Generate order ID BEFORE transaction so that all tickets share the same order ID
     const orderId = `ORD-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     console.log('Generated Order ID:', orderId);
 
-    // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       const purchasedTickets = [];
 
-      // Process each ticket type
       for (const selectedTicket of selectedTickets) {
-        // Get the EventTicket info
         const eventTicket = await tx.eventTicket.findUnique({
           where: { id: selectedTicket.id },
           include: {
@@ -46,7 +42,6 @@ export const processPurchase = async (req, res) => {
           throw new Error(`Ticket type with ID ${selectedTicket.id} not found`);
         }
 
-        // Check if enough tickets available
         const soldCount = eventTicket._count.purchasedTickets;
         const available = eventTicket.quantity - soldCount;
         
@@ -56,7 +51,6 @@ export const processPurchase = async (req, res) => {
           throw new Error(`Not enough ${selectedTicket.type} tickets available. Only ${available} left.`);
         }
 
-        // Get ticket holders for this ticket type
         const holdersForThisType = ticketHolders.filter(h => h.type === selectedTicket.type);
         
         console.log(`Creating ${holdersForThisType.length} tickets for ${selectedTicket.type}`);
@@ -65,7 +59,6 @@ export const processPurchase = async (req, res) => {
           throw new Error(`Mismatch: expected ${selectedTicket.quantity} holders for ${selectedTicket.type}, got ${holdersForThisType.length}`);
         }
 
-        // Create individual PurchasedTicket records for each holder
         for (const holder of holdersForThisType) {
           const qrCode = `QR_${Date.now()}_${crypto.randomUUID().replace(/-/g, '').substring(0, 9)}`;
           
@@ -97,8 +90,8 @@ export const processPurchase = async (req, res) => {
     });
 
     console.log('✅ Purchase successful! Created', result.totalTickets, 'tickets');
-    
-    // Get event details for email
+
+    // Get event details
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: {
@@ -108,13 +101,66 @@ export const processPurchase = async (req, res) => {
       }
     });
 
-    // Format tickets for email
-    const ticketsForEmail = selectedTickets.map(selectedTicket => ({
-      type: selectedTicket.type,
-      quantity: selectedTicket.quantity,
-      price: selectedTicket.price,
-      qrCode: null // placeholder - need to generate QR code images
-    }));
+    // ===== NEW: Generate QR codes for all tickets =====
+    console.log('🎨 Generating QR codes for tickets...');
+    const qrCodeBuffers = await generateQRCodesForTickets(result.tickets);
+    console.log('✅ QR codes generated successfully');
+
+    // ===== UPDATED: Format tickets with QR codes for email =====
+    const ticketsForEmail = result.tickets.map((ticket, index) => {
+  // Find the ticket type info
+    const ticketTypeInfo = selectedTickets.find(
+      st => st.id === ticket.event_ticket_id
+    );
+    
+    return {
+      type: `${ticketTypeInfo.type} - ${ticket.assigned_name}`, // Include attendee name
+      quantity: 1, // Each ticket is individual
+      price: ticketTypeInfo.price,
+      qrCode: qrCodeBuffers[index] // Each ticket gets its own QR code
+    };
+  });
+
+  const subtotal = parseFloat(totalAmount);
+  const serviceFee = subtotal * 0.05; // 5% service fee (matches frontend calculation)
+  const processingFee = 2.99; // Flat processing fee (matches frontend)
+
+  // Send confirmation email
+  try {
+    console.log('📧 Attempting to send confirmation email...');
+    console.log(`📧 Sending ${ticketsForEmail.length} QR codes`);
+    
+    console.log('Tickets for email:', ticketsForEmail.length);
+    console.log('QR codes with data:', ticketsForEmail.filter(t => t.qrCode).length);
+    ticketsForEmail.forEach((ticket, i) => {
+      console.log(`Ticket ${i}: type=${ticket.type}, hasQR=${!!ticket.qrCode}, qrLength=${ticket.qrCode?.length}`);
+    });
+    
+    await sendTicketConfirmation({
+      to: purchaserInfo.email,
+      customerName: `${purchaserInfo.firstName} ${purchaserInfo.lastName}`,
+      eventName: event.name,
+      eventDate: new Date(event.start_datetime).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }),
+      eventLocation: event.location,
+      tickets: ticketsForEmail,
+      totalAmount: totalAmount.toFixed(2),
+      orderId: orderId,
+      subtotal: subtotal,              // Ticket subtotal
+      serviceFee: serviceFee,          // 5% service fee
+      processingFee: processingFee,    // $2.99 processing fee
+    });
+    
+    console.log('✅ Confirmation email sent to', purchaserInfo.email);
+  } catch (emailError) {
+    console.error('⚠️ Failed to send confirmation email:', emailError.message);
+  }
 
     // Send confirmation email
     try {
@@ -140,7 +186,6 @@ export const processPurchase = async (req, res) => {
       
       console.log('✅ Confirmation email sent to', purchaserInfo.email);
     } catch (emailError) {
-      // Log error but don't fail the purchase
       console.error('⚠️ Failed to send confirmation email:', emailError.message);
     }
 
