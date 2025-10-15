@@ -23,7 +23,6 @@ export const processPurchase = async (req, res) => {
     }
 
     const orderId = `ORD-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-    console.log('Generated Order ID:', orderId);
 
     const result = await prisma.$transaction(async (tx) => {
       const purchasedTickets = [];

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = ({ onLogin }) => {
@@ -8,6 +9,7 @@ const Login = ({ onLogin }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,6 +24,21 @@ const Login = ({ onLogin }) => {
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
       onLogin(response.data.user);
+      const isMobile = window.innerWidth < 768;
+      const user = response.data.user;
+      
+      if (isMobile) {
+        // All mobile users go to check-in screen
+        navigate('/staff/checkin');
+      } else {
+        // Desktop routing based on role
+        if (user.role === 'ADMIN') {
+          navigate('/admin/dashboard');
+        } else if (user.role === 'VOLUNTEER') {
+          // For now, volunteers on desktop also go to check-in
+          navigate('/staff/checkin');
+        }
+      }
     } catch (error) {
       setError(error.response?.data?.error || 'Login failed');
     } finally {

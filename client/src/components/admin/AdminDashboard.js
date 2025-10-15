@@ -426,6 +426,16 @@ const getEventStatus = (startDateTime, endDateTime) => {
           </div>
         )}
 
+        {/* Test Check-in Tab */}
+          <div className="text-center py-12">
+            <button
+              onClick={() => navigate('/staff/checkin')}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              Test Check-in Screen
+            </button>
+          </div>
+
         {/* Users Tab */}
         {activeTab === 'users' && (
           <div className="text-center py-12">

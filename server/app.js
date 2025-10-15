@@ -29,4 +29,6 @@ app.use('/api/purchases', purchasesRoute);
 app.use('/api/admin', authenticateToken, requireAdmin, adminRoute);
 app.use('/api/checkin', authenticateToken, requireStaff, checkinRoute);
 
+//Testing route
+
 export default app;

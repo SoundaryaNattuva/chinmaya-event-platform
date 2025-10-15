@@ -5,6 +5,7 @@ import EventDetail from './components/public/EventDetail';
 import Checkout from './components/public/Checkout'; 
 import Login from './components/Login';
 import AdminDashboard from './components/admin/AdminDashboard';
+import CheckInScreen from './components/staff/CheckInScreen';
 import './App.css';
 
 function App() {
@@ -58,7 +59,15 @@ function App() {
           path="/staff/dashboard" 
           element={user ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/staff/login" />} 
         />
-      </Routes>
+      <Route 
+          path="/staff/checkin" 
+          element={user ? <CheckInScreen user={user} /> : <Navigate to="/staff/login" />} 
+          />
+      <Route 
+        path="/staff/checkin/:eventId" 
+        element={user ? <CheckInScreen user={user} /> : <Navigate to="/staff/login" />} 
+        />
+    </Routes>
     </Router>
   );
 }
