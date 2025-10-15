@@ -28,13 +28,14 @@ export const sendTicketConfirmation = async ({
   eventDate,
   eventLocation,
   tickets, // Array of individual tickets with QR codes
-  totalAmount,
   orderId,
+  totalAmount,
   subtotal,
   serviceFee,
   processingFee,
 }) => {
   try {
+    
     const subject = `You're going to ${eventName}!`;
     
     // Group tickets by type for the order summary
@@ -309,7 +310,7 @@ export const sendTicketConfirmation = async ({
               
               <div class="summary-row subtotal">
                 <span class="label">Subtotal</span>
-                <span class="amount">$${subtotal.toFixed(2)}</span>
+                <span class="amount">$${subtotal}</span>
               </div>
               
               <div class="summary-row">
@@ -324,7 +325,7 @@ export const sendTicketConfirmation = async ({
               
               <div class="summary-row total">
                 <span class="label">Total</span>
-                <span class="amount">$${totalAmount}</span>
+                <span class="amount">$${totalAmount.toFixed(2)}</span>
               </div>
               
               <div class="order-id">

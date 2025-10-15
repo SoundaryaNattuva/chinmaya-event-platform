@@ -129,9 +129,6 @@ export const processPurchase = async (req, res) => {
   try {
     console.log('📧 Attempting to send confirmation email...');
     console.log(`📧 Sending ${ticketsForEmail.length} QR codes`);
-    
-    console.log('Tickets for email:', ticketsForEmail.length);
-    console.log('QR codes with data:', ticketsForEmail.filter(t => t.qrCode).length);
     ticketsForEmail.forEach((ticket, i) => {
       console.log(`Ticket ${i}: type=${ticket.type}, hasQR=${!!ticket.qrCode}, qrLength=${ticket.qrCode?.length}`);
     });
@@ -150,11 +147,11 @@ export const processPurchase = async (req, res) => {
       }),
       eventLocation: event.location,
       tickets: ticketsForEmail,
-      totalAmount: totalAmount.toFixed(2),
       orderId: orderId,
-      subtotal: subtotal,              // Ticket subtotal
-      serviceFee: serviceFee,          // 5% service fee
-      processingFee: processingFee,    // $2.99 processing fee
+      totalAmount: Number(totalAmount) || 0,
+      subtotal: Number(subtotal) || 0,
+      serviceFee: Number(serviceFee) || 0,
+      processingFee: Number(processingFee) || 0,
     });
     
     console.log('✅ Confirmation email sent to', purchaserInfo.email);
@@ -162,39 +159,12 @@ export const processPurchase = async (req, res) => {
     console.error('⚠️ Failed to send confirmation email:', emailError.message);
   }
 
-    // Send confirmation email
-    try {
-      console.log('📧 Attempting to send confirmation email...');
-      
-      await sendTicketConfirmation({
-        to: purchaserInfo.email,
-        customerName: `${purchaserInfo.firstName} ${purchaserInfo.lastName}`,
-        eventName: event.name,
-        eventDate: new Date(event.start_datetime).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit'
-        }),
-        eventLocation: event.location,
-        tickets: ticketsForEmail,
-        totalAmount: totalAmount.toFixed(2),
-        orderId: orderId
-      });
-      
-      console.log('✅ Confirmation email sent to', purchaserInfo.email);
-    } catch (emailError) {
-      console.error('⚠️ Failed to send confirmation email:', emailError.message);
-    }
-
-    res.json({ 
-      success: true, 
-      message: 'Purchase completed successfully',
-      totalTickets: result.totalTickets,
-      orderId: orderId
-    });
+  res.json({ 
+    success: true, 
+    message: 'Purchase completed successfully',
+    totalTickets: result.totalTickets,
+    orderId: orderId
+  });
 
   } catch (error) {
     console.error('❌ Purchase processing error:', error);
